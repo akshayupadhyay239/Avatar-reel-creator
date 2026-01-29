@@ -321,29 +321,224 @@ interface ProjectConfig {
 
 ## Implementation Phases
 
-### Phase 1: Foundation
-- [ ] Set up project structure
-- [ ] Create basic layouts (A, B, C)
-- [ ] Implement avatar components
-- [ ] Basic rendering pipeline
+### Phase 1: Foundation ✅
+- [x] Set up project structure
+- [x] Create basic layouts (A, B, C)
+- [x] Implement avatar components
+- [x] Basic rendering pipeline
 
-### Phase 2: Processing
-- [ ] Script parser
-- [ ] Silence detection
-- [ ] Asset matching logic
-- [ ] Layout decision engine
+### Phase 2: Processing ✅
+- [x] Script parser
+- [x] Silence detection (framework ready)
+- [x] Asset matching logic
+- [x] Layout decision engine
 
-### Phase 3: Polish
-- [ ] TikTok-style captions
-- [ ] Dynamic text overlays
-- [ ] Transitions with SFX
+### Phase 3: Polish ✅
+- [x] TikTok-style captions (+ viral single-word mode, karaoke mode)
+- [x] Dynamic text overlays
+- [x] Transitions with SFX (fade, slide, zoom, wipe, flash)
 - [ ] Background music integration
 
 ### Phase 4: Refinement
-- [ ] Fine-tune timing
+- [ ] Fine-tune timing with actual transcription
 - [ ] Add more transition styles
 - [ ] Performance optimization
-- [ ] Documentation
+- [ ] Template variants (minimal, energetic, corporate)
+
+---
+
+## Future: Idea-to-Reel Full Pipeline
+
+**Vision**: Fully automated system that takes a raw idea/topic and produces a complete, polished reel.
+
+### Pipeline Overview
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   IDEA      │───▶│  RESEARCH   │───▶│   SCRIPT    │───▶│   AUDIO     │───▶│   AVATAR    │
+│   Input     │    │  & Context  │    │  Generation │    │  (Voice)    │    │   Video     │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                                    │
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
+│   FINAL     │◀───│    REEL     │◀───│   HELPER    │◀───│   ASSET     │◀───────────┘
+│   Output    │    │  Generator  │    │   Assets    │    │  Gathering  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### Stage 1: Research & Script Generation
+**Input**: Topic/idea, target audience, tone
+**Tools**: LLM (Claude/GPT), Web search APIs
+**Output**: Structured script with:
+  - Hook (first 3 seconds)
+  - Main content points
+  - CTA
+  - Suggested visuals per segment
+  - Keywords for asset matching
+
+```typescript
+interface ScriptGenerationInput {
+  topic: string;
+  targetAudience: string;
+  tone: 'educational' | 'entertaining' | 'promotional' | 'storytelling';
+  duration: '15s' | '30s' | '60s';
+  product?: string; // Optional product to feature
+}
+
+interface GeneratedScript {
+  hook: string;
+  segments: {
+    text: string;
+    visualSuggestion: string;
+    keywords: string[];
+  }[];
+  cta: string;
+  estimatedDuration: number;
+}
+```
+
+### Stage 2: Voice Generation
+**API**: ElevenLabs
+**Input**: Script text, voice ID, settings
+**Output**: Audio file (.mp3) with word-level timestamps
+
+```typescript
+interface VoiceGenerationConfig {
+  voiceId: string;           // ElevenLabs voice ID
+  stability: number;         // 0-1
+  similarityBoost: number;   // 0-1
+  style: number;             // 0-1
+  speakerBoost: boolean;
+}
+
+interface VoiceOutput {
+  audioUrl: string;
+  durationSeconds: number;
+  wordTimestamps: {
+    word: string;
+    startTime: number;
+    endTime: number;
+  }[];
+}
+```
+
+### Stage 3: Avatar Video Generation
+**API**: InfiniteTalk (or similar: HeyGen, Synthesia, D-ID)
+**Infrastructure**: RunPod (optional, for self-hosted models)
+**Input**: Audio file, avatar template/image
+**Output**: Avatar video synced to audio
+
+```typescript
+interface AvatarGenerationConfig {
+  avatarId: string;          // Pre-configured avatar
+  audioUrl: string;          // From Stage 2
+  resolution: '720p' | '1080p';
+  background: 'transparent' | 'green' | string; // Color or image
+}
+
+interface AvatarOutput {
+  videoUrl: string;
+  durationSeconds: number;
+  processingTime: number;
+}
+```
+
+**RunPod Integration** (for self-hosted):
+```typescript
+interface RunPodConfig {
+  endpointId: string;
+  gpuType: 'RTX3090' | 'RTX4090' | 'A100';
+  maxWorkers: number;
+  idleTimeout: number; // Auto-shutdown after idle
+}
+```
+
+### Stage 4: Asset Gathering
+**Sources**:
+  - Stock video APIs (Pexels, Pixabay, Storyblocks)
+  - AI image generation (DALL-E, Midjourney API, Flux)
+  - Pre-uploaded brand assets
+  - Screen recordings / product demos
+
+**Input**: Keywords from script, visual suggestions
+**Output**: Matched helper videos/images
+
+```typescript
+interface AssetGatheringConfig {
+  keywords: string[];
+  visualSuggestions: string[];
+  preferredSources: ('stock' | 'ai-generated' | 'brand-assets')[];
+  maxAssetsPerSegment: number;
+}
+
+interface GatheredAssets {
+  videos: HelperAsset[];
+  images: HelperAsset[];
+  source: string; // Where it came from
+}
+```
+
+### Stage 5: Reel Assembly (Current System)
+**Input**: Avatar video, script with timestamps, gathered assets
+**Output**: Final polished reel
+
+This is the current Remotion-based system we've built.
+
+### API Architecture
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    Orchestrator Service                     │
+│                  (Node.js / Python FastAPI)                 │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Claude    │  │  ElevenLabs │  │ InfiniteTalk│        │
+│  │   API       │  │    API      │  │  / RunPod   │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Pexels    │  │   DALL-E    │  │  Remotion   │        │
+│  │   API       │  │    API      │  │   Render    │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│                                                             │
+├────────────────────────────────────────────────────────────┤
+│                      Storage (S3/R2)                        │
+│              Audio, Video, Assets, Final Output             │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Implementation Phases (Future)
+
+#### Phase 5: Voice Integration
+- [ ] ElevenLabs API integration
+- [ ] Word-level timestamp extraction
+- [ ] Voice preset management
+- [ ] Audio processing utilities
+
+#### Phase 6: Avatar Generation
+- [ ] InfiniteTalk API integration
+- [ ] RunPod serverless setup (optional)
+- [ ] Avatar template management
+- [ ] Video processing & validation
+
+#### Phase 7: Script Generation
+- [ ] LLM prompt engineering for scripts
+- [ ] Research/context gathering
+- [ ] Hook optimization
+- [ ] A/B script variants
+
+#### Phase 8: Asset Automation
+- [ ] Stock API integrations
+- [ ] AI image generation integration
+- [ ] Smart asset caching
+- [ ] Brand asset library
+
+#### Phase 9: Full Orchestration
+- [ ] End-to-end pipeline API
+- [ ] Queue management
+- [ ] Progress tracking
+- [ ] Error handling & retries
+- [ ] Cost optimization
 
 ---
 
@@ -352,3 +547,5 @@ interface ProjectConfig {
 - Keep components modular for easy style customization
 - Prioritize smooth playback in Remotion Studio for editing
 - Consider memory usage with large video files
+- Future pipeline should be API-first for integration flexibility
+- Consider caching at each stage to reduce costs/time
